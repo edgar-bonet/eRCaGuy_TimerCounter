@@ -74,6 +74,10 @@ class eRCaGuy_Timer2_Counter
 	void overflow_interrupt_off();
 	void overflow_interrupt_on();
 	void increment_overflow_count();
+
+	// XXX: Debugging.
+	uint8_t flags;
+	enum { FLAG_OVF = 0x01, FLAG_LOW_CNT = 0x02 };
 	
 	//public variables:
 	//N/A

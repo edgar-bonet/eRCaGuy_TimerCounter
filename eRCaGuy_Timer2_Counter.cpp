@@ -163,10 +163,12 @@ unsigned long eRCaGuy_Timer2_Counter::get_count()
   unsigned long overflow_count_save = _overflow_count; //grab the overflow count
   boolean flag_save = bitRead(TIFR2,0); //grab the timer2 overflow flag value; see datasheet pg. 160
   if (flag_save) { //if the overflow flag is set, the timer has overflowed, but the overflow has not yet been counted
+    flags |= FLAG_OVF;
     //If the timer overflowed before we read TCNT2, we have inconsistent data: overflow_count_save was valid before the overflow, and tcnt2_save after the overflow.
     //We know TCNT2 was read after the overflow by the fact that it had a low value.
     //We fix this by accounting for the extra overflow.
     if (tcnt2_save < 128) {
+      flags |= FLAG_LOW_CNT;
       overflow_count_save++;
     }
     _overflow_count++; //force the overflow count to increment

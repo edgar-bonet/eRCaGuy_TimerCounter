@@ -79,6 +79,7 @@ void loop() {
   
   //acquire time stamps
   unsigned long t_micros = micros();
+  timer2.flags = 0; //XXX: debugging
   unsigned long t_T2_count = timer2.get_count(); //units of 0.5us; the count accumulated by Timer2_Counter
   float t_T2_micros = timer2.get_micros(); //us; the time value accumulated by Timer2_Counter (this is the exact same as doing timer2.get_count()/2.0;)
   
@@ -95,6 +96,13 @@ void loop() {
     Serial.print("get_count()/2 = "); Serial.print(t_T2_count/2); Serial.println(" us");
     Serial.print("get_count()/2.0 = "); Serial.print(t_T2_count/2.0); Serial.println(" us");
     Serial.print("get_micros() = "); Serial.print(t_T2_micros); Serial.println(" us");
+    if (timer2.flags) {
+      if (timer2.flags & timer2.FLAG_OVF)
+        Serial.print("    OVERFLOW");
+      if (timer2.flags & timer2.FLAG_LOW_CNT)
+        Serial.print(", LOW_CNT");
+      Serial.println();
+    }
     Serial.println(""); //add an extra line space
   }
 } //end of loop()
