@@ -160,17 +160,19 @@ unsigned long eRCaGuy_Timer2_Counter::get_count()
   uint8_t SREG_old = SREG; //back up the AVR Status Register; see example in datasheet on pg. 14, as well as Nick Gammon's "Interrupts" article - http://www.gammon.com.au/forum/?id=11488
   noInterrupts(); //prepare for critical section of code
   uint8_t tcnt2_save = TCNT2; //grab the counter value from Timer2
+  unsigned long overflow_count_save = _overflow_count; //grab the overflow count
   boolean flag_save = bitRead(TIFR2,0); //grab the timer2 overflow flag value; see datasheet pg. 160
-  if (flag_save) { //if the overflow flag is set
-    tcnt2_save = TCNT2; //update variable just saved since the overflow flag could have just tripped between previously saving the TCNT2 value and reading bit 0 of TIFR2.  
-                        //If this is the case, TCNT2 might have just changed from 255 to 0, and so we need to grab the new value of TCNT2 to prevent an error of up 
-                        //to 127.5us in any time obtained using the T2 counter (ex: T2_micros). (Note: 255 counts / 2 counts/us = 127.5us)
-                        //Note: this line of code DID in fact fix the error just described, in which I periodically saw an error of ~127.5us in some values read in
-                        //by some PWM read code I wrote.
+  if (flag_save) { //if the overflow flag is set, the timer has overflowed, but the overflow has not yet been counted
+    //If the timer overflowed before we read TCNT2, we have inconsistent data: overflow_count_save was valid before the overflow, and tcnt2_save after the overflow.
+    //We know TCNT2 was read after the overflow by the fact that it had a low value.
+    //We fix this by accounting for the extra overflow.
+    if (tcnt2_save < 128) {
+      overflow_count_save++;
+    }
     _overflow_count++; //force the overflow count to increment
     TIFR2 |= 0b00000001; //reset Timer2 overflow flag since we just manually incremented above; see datasheet pg. 160; this prevents execution of Timer2's overflow ISR
   }
-  _total_count = _overflow_count*256 + tcnt2_save; //get total Timer2 count
+  _total_count = overflow_count_save*256 + tcnt2_save; //get total Timer2 count
   //interrupts(); //allow interrupts again; [updated 20140709] <--WARNING, DO ****NOT**** USE THIS METHOD AFTERALL, OR ELSE IT WILL RE-ENABLE GLOBAL INTERRUPTS IF YOU CALL THIS FUNCTION
                   //DURING AN INTERRUPT SERVICE ROUTINE, THEREBY CAUSING NESTED INTERRUPTS, WHICH CAN REALLY SCREW THINGS UP.
   SREG = SREG_old; //use this method instead, to re-enable interrupts if they were enabled before, or to leave them disabled if they were disabled before
